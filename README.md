@@ -2,39 +2,50 @@
 
 Real-time creator content intelligence for detecting, explaining, reviewing, and eventually publishing the best moments from live streams.
 
-> This is an independent product inspired by the workflow category demonstrated by Highlightz. It is not affiliated with Highlightz or Twitch, and it does not copy proprietary source code.
+> Independent implementation inspired by the live-highlight product category. It is not affiliated with Highlightz or Twitch and does not copy proprietary source code.
 
 ## Product thesis
-
-Most clipping tools start after a video is finished. Live Content Intelligence starts while the stream is happening:
 
 ```
 live stream -> signals -> normalized score -> candidate moment -> platform clip
             -> human review -> learning -> better future detection
 ```
 
-The first milestone targets Twitch because its OAuth, stream metadata, chat ecosystem, and Clips workflow allow us to validate the core loop without storing full source video.
+## Current implementation
 
-## Foundation included
-
-- Next.js operator/creator dashboard shell
+### Phase 0 — complete
+- Next.js creator/operator dashboard
 - TypeScript control API
 - Python seven-signal scoring engine
-- Long-running stream-monitor worker skeleton
-- PostgreSQL schema for users, channels, sessions, signals, clips, feedback, and subscriptions
-- Redis-ready queue/runtime boundary
-- Docker Compose local dependencies
-- architecture, security, cost, roadmap, Twitch, and implementation docs
-- unit tests for the scoring engine
-- CI workflow
+- PostgreSQL domain schema
+- stream-monitor worker foundation
+- Docker/CI/docs
+
+### Phase 1 — implemented
+- Twitch authorization-code OAuth
+- signed application sessions
+- encrypted Twitch access/refresh tokens
+- automatic token refresh
+- app-token Helix client
+- Twitch channel discovery
+- current stream lookup
+- channel add/pause/enable/remove
+- plan channel limits
+- EventSub online/offline registration
+- verified EventSub webhook receiver
+- idempotent provider event log
+- durable channel runtime state
+- real Channels management UI
+
+Twitch credentials are intentionally not committed. Registering an application in the Twitch developer console and supplying deployment secrets are required to exercise live integration.
 
 ## Monorepo
 
 ```
 apps/
-  web/                    Next.js dashboard
+  web/                    Next.js dashboard + channel registry
 services/
-  control-api/            account/channel/clip control plane
+  control-api/            OAuth, Twitch/Helix, channels, EventSub
   stream-monitor/         long-running monitoring sessions
   signal-engine/          normalization + scoring
 packages/
@@ -46,7 +57,7 @@ infrastructure/docker/    container images
 
 ## Core detector
 
-The initial detector evaluates seven explainable signals:
+The initial explainable detector evaluates:
 
 1. chat velocity
 2. keyword intensity
@@ -56,20 +67,25 @@ The initial detector evaluates seven explainable signals:
 6. viewer spike
 7. silence burst
 
-Every channel is compared with its own rolling baseline. A preset supplies cold-start weights, then human approval/rejection can later tune per-channel thresholds and weights.
+Every channel will be normalized against its own rolling behavior. Presets provide cold-start thresholds and weights; reviewed clips become calibration data later.
 
-## Run locally
+## Local foundation
 
 Requirements: Node 22+, pnpm 9+, Python 3.12+, Docker.
 
 ```bash
 cp .env.example .env
 docker compose up -d postgres redis
+psql "$DATABASE_URL" -f packages/database/migrations/001_init.sql
+psql "$DATABASE_URL" -f packages/database/migrations/002_twitch_control_plane.sql
+psql "$DATABASE_URL" -f packages/database/migrations/003_eventsub_runtime_state.sql
 pnpm install
 pnpm dev
 ```
 
-For the Python signal engine:
+Without Twitch credentials the dashboard foundation can run, but OAuth and Helix requests correctly report that integration is not configured.
+
+Signal engine:
 
 ```bash
 cd services/signal-engine
@@ -79,8 +95,12 @@ pip install -e ".[dev]"
 pytest
 ```
 
-## Current status
+## Next phase
 
-Phase 0 foundation. Twitch OAuth/API calls are represented by explicit interfaces and placeholders until application credentials are configured. No credentials belong in git.
+Phase 2 turns stream state into a durable monitoring data plane: Redis-backed jobs, worker leasing/recovery, live telemetry, chat/viewer/audio signal collection, rolling baselines, and SSE updates.
 
-See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the build sequence.
+See:
+- [Phase 1 runbook](docs/PHASE_1_IMPLEMENTATION.md)
+- [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
+- [Twitch integration](docs/TWITCH_INTEGRATION.md)
+- [Technical architecture](docs/TECHNICAL_ARCHITECTURE.md)
