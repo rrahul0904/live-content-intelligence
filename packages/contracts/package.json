@@ -1,0 +1,12 @@
+{
+  "name": "@lci/contracts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "echo contracts-tests-pending"
+  },
+  "devDependencies": { "typescript": "^5.8.3" }
+}
