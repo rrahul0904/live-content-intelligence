@@ -1,4 +1,4 @@
-import { config, requireValue } from "../config.js";
+import { config, eventSubConfigured, requireValue } from "../config.js";
 import { HttpError } from "../lib/errors.js";
 
 const TWITCH_IDENTITY = "https://id.twitch.tv/oauth2";
@@ -135,6 +135,57 @@ export class TwitchClient {
       throw new HttpError(502, "Twitch accepted no clip record", "twitch_clip_missing");
     }
     return clip;
+  }
+
+  async ensureStreamSubscriptions(broadcasterId: string): Promise<boolean> {
+    if (!eventSubConfigured()) return false;
+
+    await Promise.all([
+      this.createEventSubSubscription("stream.online", broadcasterId),
+      this.createEventSubSubscription("stream.offline", broadcasterId)
+    ]);
+    return true;
+  }
+
+  private async createEventSubSubscription(
+    type: "stream.online" | "stream.offline",
+    broadcasterId: string
+  ): Promise<void> {
+    const token = await this.getAppAccessToken();
+    const clientId = requireValue(config.twitchClientId, "TWITCH_CLIENT_ID");
+    const callback = requireValue(
+      config.twitchEventSubCallbackUrl,
+      "TWITCH_EVENTSUB_CALLBACK_URL"
+    );
+    const secret = requireValue(config.twitchEventSubSecret, "TWITCH_EVENTSUB_SECRET");
+
+    const response = await fetch(TWITCH_HELIX + "/eventsub/subscriptions", {
+      method: "POST",
+      headers: {
+        "Client-Id": clientId,
+        Authorization: "Bearer " + token,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        type,
+        version: "1",
+        condition: { broadcaster_user_id: broadcasterId },
+        transport: {
+          method: "webhook",
+          callback,
+          secret
+        }
+      })
+    });
+
+    if (response.ok || response.status === 409) return;
+
+    const detail = await response.text();
+    throw new HttpError(
+      response.status === 429 ? 429 : 502,
+      "Unable to create Twitch EventSub subscription: " + detail.slice(0, 240),
+      response.status === 429 ? "twitch_rate_limited" : "twitch_eventsub_error"
+    );
   }
 
   private async getAppAccessToken(): Promise<string> {
