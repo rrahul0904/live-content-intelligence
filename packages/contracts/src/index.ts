@@ -25,3 +25,31 @@ export interface CandidateClip {
   threshold: number;
   reviewState: "pending" | "approved" | "rejected";
 }
+
+export interface StreamSummary {
+  id: string;
+  gameName: string;
+  title: string;
+  viewerCount: number;
+  startedAt: string;
+}
+
+export interface ConfiguredChannel {
+  id: string;
+  providerChannelId: string;
+  login: string;
+  displayName: string;
+  profileImageUrl?: string | null;
+  preset: string;
+  threshold: number;
+  enabled: boolean;
+  live: boolean;
+  stream: StreamSummary | null;
+}
+
+export interface ChannelRegistry {
+  plan: string;
+  channelLimit: number;
+  enabledCount: number;
+  channels: ConfiguredChannel[];
+}
