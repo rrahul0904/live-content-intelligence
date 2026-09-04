@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const signals = [
   ["Chat velocity", 0.84],
   ["Keyword intensity", 0.61],
@@ -19,7 +21,7 @@ export default function Home() {
           <div className="brand">Live Content<br/>Intelligence</div>
         </div>
         <nav>
-          <a className="active">Live Streams</a>
+          <Link className="active" href="/">Live Streams</Link>
           <a>Clip Review <span className="badge">12</span></a>
           <a>Clip Library</a>
           <a>VOD Scanner</a>
@@ -27,6 +29,7 @@ export default function Home() {
           <a>Scheduler</a>
         </nav>
         <nav className="bottomNav">
+          <Link href="/channels">Channels</Link>
           <a>Operations</a>
           <a>Settings</a>
         </nav>
@@ -39,7 +42,7 @@ export default function Home() {
             <h1>Live Streams</h1>
             <p>Watch the signal engine decide what is worth keeping.</p>
           </div>
-          <button className="primary">+ Add channel</button>
+          <Link className="primary buttonLink" href="/channels">+ Add channel</Link>
         </header>
 
         <section className="stats">
@@ -66,7 +69,7 @@ export default function Home() {
           <div className="chart" aria-label="recent trigger score">
             {scoreHistory.map((value, index) => (
               <div key={index} className="barWrap">
-                <div className="bar" style={{ height: `${value}%` }} />
+                <div className="bar" style={{ height: value + "%" }} />
               </div>
             ))}
             <div className="threshold">74 threshold</div>
@@ -76,7 +79,7 @@ export default function Home() {
             {signals.map(([name, value]) => (
               <div className="signal" key={name}>
                 <div><span>{name}</span><strong>{Math.round(value * 100)}</strong></div>
-                <div className="meter"><i style={{ width: `${value * 100}%` }}/></div>
+                <div className="meter"><i style={{ width: value * 100 + "%" }}/></div>
               </div>
             ))}
           </div>
