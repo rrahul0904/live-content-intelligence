@@ -1,12 +1,19 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
-import { config, authConfigured, twitchConfigured } from "./config.js";
+import rawBody from "fastify-raw-body";
+import {
+  authConfigured,
+  config,
+  eventSubConfigured,
+  twitchConfigured
+} from "./config.js";
 import { DETECTOR_PRESETS } from "./detector-presets.js";
 import { closeDatabase } from "./db.js";
 import { asPublicError } from "./lib/errors.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerChannelRoutes } from "./routes/channels.js";
+import { registerEventSubRoutes } from "./routes/eventsub.js";
 
 const app = Fastify({ logger: true });
 
@@ -17,6 +24,13 @@ await app.register(cookie, {
 await app.register(cors, {
   origin: config.webOrigin,
   credentials: true
+});
+
+await app.register(rawBody, {
+  field: "rawBody",
+  global: false,
+  encoding: "utf8",
+  runFirst: true
 });
 
 app.setErrorHandler((error, _request, reply) => {
@@ -36,6 +50,7 @@ app.get("/ready", async (_request, reply) => {
     databaseConfigured: Boolean(config.databaseUrl),
     twitchConfigured: twitchConfigured(),
     authConfigured: authConfigured(),
+    eventSubConfigured: eventSubConfigured(),
     redisConfigured: Boolean(process.env.REDIS_URL)
   };
   const ready = checks.databaseConfigured && checks.twitchConfigured && checks.authConfigured;
@@ -49,12 +64,14 @@ app.get("/v1/detector/presets", async () => ({
 app.get("/v1/runtime/config", async () => ({
   twitchConfigured: twitchConfigured(),
   authConfigured: authConfigured(),
+  eventSubConfigured: eventSubConfigured(),
   databaseConfigured: Boolean(config.databaseUrl),
   redisConfigured: Boolean(process.env.REDIS_URL)
 }));
 
 await registerAuthRoutes(app);
 await registerChannelRoutes(app);
+await registerEventSubRoutes(app);
 
 const port = Number(process.env.PORT ?? 3001);
 
