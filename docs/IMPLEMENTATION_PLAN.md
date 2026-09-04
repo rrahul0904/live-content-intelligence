@@ -1,6 +1,6 @@
 # Implementation Plan
 
-## Phase 0 — foundation (this commit)
+## Phase 0 — foundation — COMPLETE
 
 - monorepo and CI
 - dashboard concept
@@ -11,37 +11,43 @@
 - Docker local dependencies
 - product, architecture, security, cost, and integration docs
 
-## Phase 1 — Twitch control plane
+## Phase 1 — Twitch control plane — IMPLEMENTED
 
-- Twitch application registration
-- OAuth authorization-code flow
-- encrypted token vault
+- Twitch authorization-code OAuth flow
+- encrypted token vault and refresh flow
 - identity/session handling
-- channel lookup and add/remove APIs
-- stream online/offline discovery
+- channel lookup and add/remove/pause APIs
+- live/offline discovery through Get Streams
 - plan limit enforcement
-- webhook/EventSub evaluation
+- EventSub stream.online/stream.offline subscription support
+- verified EventSub webhook ingestion and durable runtime state
+- real Channels management UI
 
-Acceptance: a signed-in user can add a channel and the system reliably knows when it becomes live.
+External prerequisite: register a Twitch application and configure secrets/redirect URLs in the deployment environment.
 
-## Phase 2 — durable live monitoring
+Acceptance: after credentials and migrations are configured, a signed-in user can add a channel and the control plane can resolve its current live state; deployed environments can also receive Twitch online/offline events.
 
-- Redis/BullMQ or Temporal workflow
-- worker leases + heartbeats
-- chat ingestion adapter
+## Phase 2 — durable live monitoring — NEXT
+
+- Redis-backed work queue
+- monitor leases + heartbeats + recovery
+- online/offline reconciler
 - viewer/metadata sampler
-- lightweight audio features
+- chat ingestion adapter
 - rolling baseline persistence
+- signal-sample ingestion
 - SSE telemetry to dashboard
+- worker operational endpoints
 
-Acceptance: restart any worker during a live stream without losing the logical monitor session.
+Acceptance: restart any worker during a live stream without losing the logical monitor session, and display a live score feed without the web process owning the monitor.
 
 ## Phase 3 — trigger and clipping
 
-- preset registry
-- signal normalization
+- preset registry expansion
+- production signal normalization
 - threshold/cooldown/dedupe
-- Twitch Clips API adapter
+- Twitch Clips API orchestration
+- asynchronous clip reconciliation
 - persisted candidate feature vectors
 - review queue
 
