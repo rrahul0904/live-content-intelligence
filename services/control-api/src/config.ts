@@ -6,6 +6,8 @@ export interface RuntimeConfig {
   twitchClientId?: string;
   twitchClientSecret?: string;
   twitchRedirectUri: string;
+  twitchEventSubCallbackUrl?: string;
+  twitchEventSubSecret?: string;
   tokenEncryptionKey?: string;
   cookieSecret?: string;
 }
@@ -19,12 +21,22 @@ export const config: RuntimeConfig = {
   twitchClientSecret: process.env.TWITCH_CLIENT_SECRET,
   twitchRedirectUri:
     process.env.TWITCH_REDIRECT_URI ?? "http://localhost:3001/auth/twitch/callback",
+  twitchEventSubCallbackUrl: process.env.TWITCH_EVENTSUB_CALLBACK_URL,
+  twitchEventSubSecret: process.env.TWITCH_EVENTSUB_SECRET,
   tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY,
   cookieSecret: process.env.COOKIE_SECRET
 };
 
 export function twitchConfigured(): boolean {
   return Boolean(config.twitchClientId && config.twitchClientSecret && config.twitchRedirectUri);
+}
+
+export function eventSubConfigured(): boolean {
+  return Boolean(
+    twitchConfigured() &&
+    config.twitchEventSubCallbackUrl &&
+    config.twitchEventSubSecret
+  );
 }
 
 export function authConfigured(): boolean {
