@@ -214,3 +214,52 @@ export async function removeUserChannel(userId: string, userChannelId: string): 
   );
   return rows.length === 1;
 }
+
+export async function recordTwitchStreamEvent(input: {
+  messageId: string;
+  eventType: "stream.online" | "stream.offline";
+  eventTimestamp: Date;
+  providerChannelId: string;
+  providerStreamId?: string | null;
+  startedAt?: Date | null;
+  payload: unknown;
+}): Promise<boolean> {
+  const inserted = await query<{ message_id: string }>(
+    `insert into provider_events (
+       message_id, provider, event_type, event_timestamp, payload
+     ) values ($1,'twitch',$2,$3,$4::jsonb)
+     on conflict (message_id) do nothing
+     returning message_id`,
+    [
+      input.messageId,
+      input.eventType,
+      input.eventTimestamp,
+      JSON.stringify(input.payload)
+    ]
+  );
+
+  if (inserted.length === 0) return false;
+
+  const isLive = input.eventType === "stream.online";
+  await query(
+    `insert into channel_runtime_state (
+       provider, provider_channel_id, is_live, provider_stream_id, started_at, last_event_at, updated_at
+     ) values ('twitch',$1,$2,$3,$4,$5,now())
+     on conflict (provider, provider_channel_id) do update set
+       is_live = excluded.is_live,
+       provider_stream_id = excluded.provider_stream_id,
+       started_at = excluded.started_at,
+       last_event_at = excluded.last_event_at,
+       updated_at = now()
+     where excluded.last_event_at >= channel_runtime_state.last_event_at`,
+    [
+      input.providerChannelId,
+      isLive,
+      isLive ? input.providerStreamId ?? null : null,
+      isLive ? input.startedAt ?? null : null,
+      input.eventTimestamp
+    ]
+  );
+
+  return true;
+}
