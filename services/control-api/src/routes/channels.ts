@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { DETECTOR_PRESETS, isPresetId } from "../detector-presets.js";
 import { HttpError } from "../lib/errors.js";
@@ -29,7 +29,7 @@ const patchSchema = z.object({
   message: "At least one field is required"
 });
 
-async function authenticatedUser(request: Parameters<FastifyInstance["get"]>[1] extends never ? never : any) {
+async function authenticatedUser(request: FastifyRequest) {
   const userId = requireUserId(request);
   const user = await getUser(userId);
   if (!user) throw new HttpError(401, "Session user no longer exists", "invalid_session");
@@ -140,7 +140,17 @@ export async function registerChannelRoutes(app: FastifyInstance): Promise<void>
       threshold: preset.threshold
     });
 
-    return reply.code(existing ? 200 : 201).send(saved);
+    let eventSubRegistered = false;
+    try {
+      eventSubRegistered = await twitchClient.ensureStreamSubscriptions(remote.id);
+    } catch (error) {
+      request.log.warn({ error, broadcasterId: remote.id }, "EventSub registration failed; polling remains available");
+    }
+
+    return reply.code(existing ? 200 : 201).send({
+      ...saved,
+      eventSubRegistered
+    });
   });
 
   app.patch("/v1/channels/:id", async (request) => {
@@ -176,6 +186,15 @@ export async function registerChannelRoutes(app: FastifyInstance): Promise<void>
       }
     );
     if (!updated) throw new HttpError(404, "Configured channel not found", "configured_channel_not_found");
+
+    if (parsed.data.enabled === true) {
+      try {
+        await twitchClient.ensureStreamSubscriptions(updated.provider_channel_id);
+      } catch (error) {
+        request.log.warn({ error, broadcasterId: updated.provider_channel_id }, "EventSub registration failed");
+      }
+    }
+
     return updated;
   });
 
